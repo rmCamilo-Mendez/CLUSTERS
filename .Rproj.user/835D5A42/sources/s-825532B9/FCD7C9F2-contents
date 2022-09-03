@@ -1,0 +1,447 @@
+---
+title: <span style="color:#F2862C">**ANÁLISIS DE CORRESPONDENCIA MULTIPLE**</span>
+author: 
+- Camilo Mendez Hilario - [20191412@lamolina.edu.pe](mailto:20191412@lamolina.edu.pe){.email}
+- Wesley Kawano Villavicencio - [20190362@lamolina.edu.pe](mailto:20190362@lamolina.edu.pe){.email}
+- Nayra Limaymanta Jorge - [20190301@lamolina.edu.pe](mailto:20190301@lamolina.edu.pe){.email}
+- Stefano Huerta Barba - [20191305@lamolina.edu.pe](mailto:20191305@lamolina.edu.pe){.email}
+- Efrain Huaringa Alvarez - [20181147@lamolina.edu.pe](mailto:20181147@lamolina.edu.pe){.email}
+output:
+  rmdformats::downcute:
+    self_contained: true
+    lightbox: true
+---
+
+# <span style="color:#3A95B1">**Introducción**</span>
+_La intoxicación alimentaria o la enfermedad transmitida por los alimentos pueden afectar a cualquier persona que ingiera alimentos que están contaminados con bacterias, virus, parásitos, toxinas u otras sustancias, pero algunas personas son más propensas a enfermarse o a padecer una enfermedad grave._  
+
+_Los niños tienen un riesgo mayor de sufrir enfermedades transmitidas por los alimentos y otras complicaciones de salud relacionadas, ya que sus sistemas inmunitarios aún se están desarrollando. Los niños pequeños con sistemas inmunitarios en desarrollo no pueden combatir las infecciones como lo hacen los adultos. Además, los niños producen menos ácido estomacal, que mata las bacterias dañinas, por lo que suelen presentar síntomas como vómitos, diarrea, fiebre o dolor abdominal. En la mayoría de los casos, la intoxicación alimentaria es leve y desaparece sin tratamiento. Pero algunos casos los niños necesitan ir al hospital._  
+
+_Para este caso se utilizaron datos que fueron extraidos de una encuesta realizada a una muestra de 55 niños de educación primaria que sufrieron intoxicación alimentaria. Se les preguntó sobre sus síntomas y sobre lo que comían._
+
+</center>![](imagen.jpg)</center>
+
+### **Objetivo**
+* _Encontrar y describir las relaciones existentes entre las categorias de las variables categóricas._
+
+### **11 Variables de estudio:**
+
+| Variable          | Tipo de variable  |
+|-------------------|-------------------|
+| Nausea            | Categorica        |  
+| Vómitos           | Categorica        |    
+| Abdominales       | Categorica        |        
+| Fiebre            | Categorica        | 
+| Diarrea           | Categorica        | 
+| Papa              | Categorica        |
+| Pez               | Categorica        |
+| Mayonesa          | Categorica        | 
+| Calabacín         | Categorica        | 
+| Queso             | Categorica        | 
+| Helado            | Categorica        | 
+
+
+# <span style="color:#3A95B1">**Lectura de Datos**</span> 
+
+```{r,warning=FALSE, message=F}
+datos <- read.csv("datos_encuesta_niños.csv")
+
+# Elimina la primera columna
+datos$X <- NULL
+
+head(datos)
+```
+
+
+```{r,warning=FALSE, message=F}
+# convirtiendo las variables a factor
+datos$Nausea <- factor(datos$Nausea)
+datos$Vómitos <- factor(datos$Vómitos)
+datos$Abdominales <- factor(datos$Abdominales)
+datos$Fiebre <- factor(datos$Fiebre)
+datos$Diarrea <- factor(datos$Diarrea)
+datos$Papa <- factor(datos$Papa)
+datos$Pez <- factor(datos$Pez)
+datos$Mayonesa <- factor(datos$Mayonesa)
+datos$Calabacín <- factor(datos$Calabacín)
+datos$Queso <- factor(datos$Queso)
+datos$Helado <- factor(datos$Helado)
+```
+
+```{r,warning=FALSE, message=F}
+str(datos)
+```
+
+# <span style="color:#3A95B1"> **Prueba de independencia Chi-cuadrado** </span>
+
+* $H_o:$ Las variables son independientes
+
+* $H_1:$ Las variables son dependientes
+
+```{r}
+attach(datos)
+chisq.test(Abdominales,Diarrea)
+chisq.test(Fiebre,Vómitos)
+chisq.test(Abdominales,Mayonesa)
+
+```
+
+**Interpretación:**  
+
+_Como el pvalor es muy pequeño entonces no podemos afirmar que las variables son independientes._  
+
+
+# <span style="color:#3A95B1">**Tabla disyuntiva (variables dicotomicas O Dummies)**</span>
+
+```{r,warning=FALSE, message=F}
+library(fastDummies)
+dummy_cols(datos, c("Nausea","Vómitos","Abdominales","Fiebre","Diarrea","Papa","Pez",
+                    "Mayonesa","Calabacín","Queso","Helado"))->tabla_disyuntiva
+
+# se elimina las 12 primeras columnas dado que estas contienen las variables originales que no forman parte
+# del formato de las variables que presenta nuestra matriz disyuntiva.
+tabla_disyuntiva[,-c(0:11)]->tabla_disyuntiva  ; tabla_disyuntiva
+
+```
+
+**Interpretación de la tabla**  
+
+Este caso i(1,2,3,...,55) es el individuo u observación y j(1,2,3,...,22) son las categorias.
+
+* Es 0 cuando el individuo i no está en la categoria j.  
+* Es 1 cuando el individuo i si está en la categoria j.  
+
+El individuo 1 presenta lo siguiente:  
+- Síntomas:  Si tiene nauseas, no tiene vómitos, si presenta dolor abdominal, si presenta fiebre y  también diarrea.  
+- Comida ingerida: Si ha comido papa, pescado, mayonesa, calabacín, queso y helado.  
+
+
+El individuo 2 presenta lo siguiente:  
+- Síntomas:  No tiene nauseas, no tiene vómitos, no presenta dolor abdominal, no presenta fiebre y tampoco presenta diarrea.  
+- Comida ingerida: Si ha comido papa, pescado, mayonesa, calabacín y helado pero no ha comido queso.  
+
+
+**Descripción de los datos**
+
+```{r,warning=FALSE, message=F}
+library(funModeling) 
+df_status(tabla_disyuntiva)
+```
+
+*Interpretación*  
+
+- _Para la categoría de los que no presentan nauseas:_  
+* _En total 12 niños respondieron que no presentan nauseas._  
+* _El 21.82% respondieron que no presentan nauseas._  
+* _Esta categoría no presenta na y tampoco valores infinitos._ 
+
+- _Para la categoría de los que si presentan nauseas:_  
+* _En total 43 niños respondieron que si presentan nauseas._  
+* _El 78.18% respondieron que si presentan nauseas._  
+* _Esta categoría no presenta na y tampoco valores infinitos._  
+
+```{r,warning=FALSE, message=F}
+# covertir a matriz disyuntiva    
+matriz_disyuntiva <- as.matrix(tabla_disyuntiva)
+```
+
+# <span style="color:#3A95B1"> **Matriz de Burt** </span>
+
+* _La matriz de burt resulta del producto de la transpuesta de la matriz disyuntiva con la matriz disyuntica B  =  A´x A_
+```{r,warning=FALSE, message=F}
+t(matriz_disyuntiva) %*% (matriz_disyuntiva) -> matriz_burt  ; matriz_burt
+```
+
+# <span style="color:#3A95B1"> **Correspondencias Multiple con el paquete FactoMineR** </span>
+
+```{r,warning=FALSE, message=F}
+library(FactoMineR) 
+acm <- CA(matriz_burt,graph=F);acm
+```
+
+```{r,warning=FALSE, message=F}
+# autovalores
+acm$eig
+```
+
+## **Varianza Explicada**
+
+```{r,warning=FALSE, message=F}
+DT::datatable(data =round(acm$eig[,1:2],4), 
+              extensions = 'Scroller',
+              options = list(dom='tp',  
+                             class = 'stripe compact hover cell-border'))
+```
+
+```{r,warning=FALSE, message=F}
+# Scree Plot de los Autovalores
+factoextra::fviz_eig(acm, addlabels = TRUE, ylim = c(0, 70), barcolor="red4", barfill="red4", linecolor="black")+
+  ggthemes::theme_fivethirtyeight(base_size =20, base_family = "serif") +
+  ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank(), 
+                 plot.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 panel.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 axis.title.y  = ggplot2::element_text(), 
+                 axis.title.x = ggplot2::element_text()) +
+  ggplot2::labs(title = "Varianza Explicada", 
+                subtitle = "Por cada Dimensión")+
+  ggplot2::ylab('% Variación Explicada') +
+  ggplot2::xlab("Dimensiones") +
+  ggplot2::geom_hline(yintercept = (100/11), size=1)
+```
+
+ **Interpretación**
+*  _En la grafica podemos ver la varianza explicada de cada dimension de las 10 dimensiones que mas aportan del total de 22 dimensiones._
+
+*   _En la linea horizontal de color negro se muestra el valor de la varianza explicada que tomaria cada    dimension si las 11 aportaran lo mismo._
+
+## **Varianza Acumulada Explicada**
+```{r,warning=FALSE, message=F}
+acumulado <- acm$eig[1:11,3]
+dimensión <- c(1:11)
+datos1 <- data.frame(cbind(dimensión, acumulado))
+
+DT::datatable(data =round(datos1[,1:2],4), 
+              extensions = 'Scroller',
+              options = list(dom='tp',  
+                             class = 'stripe compact hover cell-border'))
+```
+
+**Varianza Acumulada Explicada**
+```{r,warning=FALSE, message=F}
+ggplot2::ggplot(data = datos1, ggplot2::aes(x=dimensión, y=acumulado))+
+  ggplot2::geom_bar(stat = "identity", fill="red4", color="red4") +
+  ggplot2::geom_line(color="black")+
+  ggplot2::geom_point(color="black") +
+  ggplot2::geom_hline(yintercept = 80, size=1) +
+  ggplot2::geom_text(label= paste(round(acumulado,1),"%"), color="black", size=3, vjust = 1.4) +
+  ggthemes::theme_fivethirtyeight(base_size =17, base_family = "serif") +
+  ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank(), 
+                 plot.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 panel.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 axis.title.y  = ggplot2::element_text(), 
+                 axis.title.x = ggplot2::element_text()) +
+  ggplot2::labs(title = "Varianza Acumulada Explicada", 
+                subtitle = "Por cada Dimensión")+
+  ggplot2::ylab('% Variación Explicada') +
+  ggplot2::xlab("Dimensiones") +
+  ggplot2::scale_x_continuous(breaks = c(1:9)) 
+
+```
+
+ **Interpretación**
+
+*  _En esta grafica de barras podemos observar la varianza explicada pero acumulada de las 12 dimensiones que aportan algo._
+*  _En la linea horizontal nos muestra hasta que dimensiones obtenemos cerca del 80% de la varianza explicada de los datos._
+*  _Ademas apartir de de la 3ra dimensión el crecimiento es menor a las demas dimensiones._
+*  _Con estos criterios podemos decir que con 2 dimensiones es sufiente para el analisis de los datos._
+
+# <span style="color:#3A95B1"> **Interpretación de los Indicadores del ACM** </span>
+ 
+```{r,warning=FALSE, message=F}
+summary(acm,nb.dec = 3, ncp = 2)
+```
+
+
+## **Contribuciones Absolutas**
+
+```{r,warning=FALSE, message=F}
+factoextra::fviz_contrib(acm,axes = 1, fill = "red4", color = "red4") +
+  ggthemes::theme_fivethirtyeight(base_size =16, base_family = "serif") +
+  ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank(), 
+                 axis.text.x = ggplot2::element_text(angle=40, hjust=1),
+                 plot.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 panel.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 axis.title.y  = ggplot2::element_text(), 
+                 axis.title.x = ggplot2::element_text())+
+  ggplot2::labs(title = "Contribución de Categorias", subtitle = "A la Dimensión 1")+
+  ggplot2::ylab('% Contribución') +
+  ggplot2::xlab("Categorias")
+```
+
+**Interpretación**
+* _Las grafica muestra la contribucion de las 22 diferentes categorias a la respectiva dimension, la linea roja representa el valor de la contribucion de las categorias si todas aportaran lo mismo._
+
+* _El 15.5% de la inercia (variabilidad) de la dimension 1 es explicada por los que no presentan dolor Abdominal seguido de los que no presentan Diarrea y Fiebre con 13.5%._
+* _Las variables Pez, Calabacín y Papa  no contribuyen  a la dimension 1._
+
+```{r,warning=FALSE, message=F}
+factoextra::fviz_contrib(acm, axes = 2, fill = "red4", color = "red4") +
+  ggthemes::theme_fivethirtyeight(base_size =16, base_family = "serif") +
+  ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank(), 
+                 axis.text.x = ggplot2::element_text(angle=40, hjust=1),
+                 plot.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 panel.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 axis.title.y  = ggplot2::element_text(), 
+                 axis.title.x = ggplot2::element_text()) +
+  ggplot2::labs(title = "Contribución de Categorias", subtitle = "A la Dimensión 2")+
+  ggplot2::ylab('% Contribución') +
+  ggplot2::xlab("Categorias") 
+```
+
+**Interpretación**
+* _Las grafica muestra la contribucion de las 22 diferentes categorias a la respectiva dimension, la linea roja representa el valor de la contribucion de las categorias si todas aportaran lo mismo._
+
+* _El 29% de la inercia (variabilidad) de la dimension 2 es explicada por la categoria de los que no comen calabacín seguido de los que no comen papa con un 26%._  
+
+* _Las categorias de las variables Diarrea, Abdominal y Pez no contribuyen  a la dimension 2._
+
+
+## **Contribuciones relativas**
+
+
+```{r,warning=FALSE, message=F}
+library(factoextra)
+row <- get_ca_row(acm)
+col <- get_ca_col(acm)
+
+
+head(row$cos2)
+head(col$cos2)
+```
+
+
+
+```{r,warning=FALSE, message=F}
+factoextra::fviz_cos2(acm,axes = 1, choice = "row", fill = "#5F9EA0", color = "#5F9EA0") +
+  ggthemes::theme_fivethirtyeight(base_size =16, base_family = "serif") +
+  ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank(), 
+                 axis.text.x = ggplot2::element_text(angle=40, hjust=1),
+                 plot.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 panel.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 axis.title.y  = ggplot2::element_text(), 
+                 axis.title.x = ggplot2::element_text())+
+  ggplot2::labs(title = "Contribución de la Dimensión 1", subtitle = "A las categorias")+
+  ggplot2::ylab('Contribución') +
+  ggplot2::xlab("Categorias")
+
+```
+**Interpretación**  
+
+*  _La dimensión 1 contribuye en un 58.8 % a la inercia de los que no presentan dolor Abdominal._  
+
+*  _La dimensión 1 contribuye en un 67.1 % a la inercia de los que si presentan Diarrea._ 
+
+*  _La dimensión 1 contribuye en un 95.88 % a la inercia de los que no presentan fiebre._  
+
+
+
+```{r,warning=FALSE, message=F}
+factoextra::fviz_cos2(acm,axes = 2, choice = "row", fill = "#5F9EA0", color = "#5F9EA0") +
+  ggthemes::theme_fivethirtyeight(base_size =16, base_family = "serif") +
+  ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank(), 
+                 axis.text.x = ggplot2::element_text(angle=40, hjust=1),
+                 plot.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 panel.background = ggplot2::element_rect(fill = 'white', colour = 'white'), 
+                 axis.title.y  = ggplot2::element_text(), 
+                 axis.title.x = ggplot2::element_text())+
+  ggplot2::labs(title = "Contribución de la Dimensión 2 ", subtitle = "A las categorias")+
+  ggplot2::ylab('Contribución') +
+  ggplot2::xlab("Categorias")
+
+```
+**Interpretación**  
+
+* _La dimensión 2 contribuye en un 55.9 % a la inercia de los que si comen Calabacín._
+
+* _La dimensión 2 contribuye en un  46.68 % a la inercia de los que no comen papa._
+
+
+## **Mapa Perceptual**
+
+```{r,warning=FALSE, message=F}
+library(FactoMineR)
+res.mca <- MCA(datos,method = 'Burt') 
+```
+
+
+**Interpretación para las categorías:**
+
+* _Los niños que comieron queso y mayonesa están asociados a los niños que presentaron diarrea, dolor abdominal y fiebre._ 
+
+* _Los niños que no comieron papa y pescado están asociados con los niños que presentaron nauseas._  
+
+* _Los niños que presentaron dolor abdominal y fiebre están asociados con los niños que presentaron nauseas y vómitos._    
+
+
+
+**Interpretación para las variables:**
+
+* _Las variables fiebre,Abdominal, diarrea, Mayonesa y Nausea está siendo mejor explicada por la dimensión 1._  
+
+
+* _Las variables Calabacín, papa y Helado está siendo mejor explicadas por la dimensión 2._ 
+
+
+**Categorias con su respectivo componente**
+
+```{r,warning=FALSE, message=F}
+library(dplyr)
+contri_abs <- data.frame(acm$row$contrib[,1:2])
+contri_abs %>% rename('contri_abs1'= Dim.1,'contri_abs2'= Dim.2 )->contri_abs
+contri_rel<- data.frame(acm$row$cos2[,1:2])
+contri_rel %>% rename('contri_rel1'= Dim.1,'contri_rel2'= Dim.2 )->contri_rel
+dimen <- data.frame(acm$row$coord[,1:2])
+
+resumen <- cbind(dimen,contri_abs,contri_rel); resumen
+```
+
+| Categorias        | Componente 1  | Componente 2 |
+|-------------------|---------------|--------------|
+| Nausea_no         | CR(+)         |              |
+| Nausea_si         | CA(-)         |              |
+| vómitos_no        |               | CA(-)        |   
+| vómitos_si        | CR(-)         |              |
+| abdominales_no    | CA(+)         |              |
+| abdominales_si    | CA(-)         |              |
+| fiebre_no         | CA(+)         |              | 
+| fiebre_si         | CA(-)         |              | 
+| diarrea_no        | CA(+)         |              | 
+| diarrea_si        | CA(-)         |              | 
+| papa_no           |               | CA(-)        | 
+| papa_si           |               | CR(+)        |  
+| pez_no            |               | CR(-)        |   
+| pez_si            |               | CR(+)        |      
+| mayonesa_no       | CA(+)         |              | 
+| mayonesa_si       | CR(-)         |              | 
+| calabacín_no      |               | CA(+)        | 
+| calabacín_si      |               | CR(-)        | 
+| queso_no          | CA(+)         |              | 
+| queso_si          | CR(-)         |              | 
+| helado_no         |               | CR(+)        | 
+| helado_si         |               | CR(-)        | 
+
+
+**Interpretación para la tabla:**  
+
+_La interpretación del componente 1 y 2 se da de la siguiente manera:_  
+
+*  _Los que son positivos en dicha componente presentan una asociación directamente proporcional._
+
+*  _Los que son negativos en dicha componente presentan una asociación directamente proporcional._
+
+*  _Si los signos son + y - entonces presentan una asociación linversamente proporcional._
+
+# <span style="color:#3A95B1">**Conclusiones finales** </span>
+* _Como ya sabemos el objetivo del análisis de correspondencia simple y múltiple es el estudio de la asociación entre las categorías de las variables usando el mapa perceptual para su interpretación, en el caso de estudio representamos las 22 categorías en 2 dimensiones usando el mapa perceptual._
+
+* _Para el caso de estudio la cantidad de dimensiones ideales serían 11 (N° total de categorías – N° variables), ya que estas representan el 100% de la inercia total; sin embargo, representar en 11 dimensiones su interpretación no es muy clara en el mapa perceptual debido a esto usamos 2 dimensiones, ya que estas representan el 76% de la inercia total y su interpretación en el mapa perceptual es más clara._
+
+* _Cuando hacemos mención a la Matriz de Burt siendo esta una matriz cuadrada simétrica, esta se forma por tablas de contingencia del cruce de los pares de variables y su diagonal contiene el cruce de las variables por ellas mismas._
+
+# <span style="color:#3A95B1"> **Bibliografia** </span>
+* _Santiago de la Fuente Fernandez. (2011). Análisis correspondencias simples y múltiples. Fac. Ciencias Económicas y Empresariales: Universidad Autónoma de Madrid._
+
+* _MICHAEL GREENACRE. (2008). Análisis de correspondencias múltiples. En La práctica del análisis de correspondencias (11). Universidad Pompeu Fabra: Fundación BBVA._
+
+* _Peter Olejua. (2017). Análisis de correspondencia (CA). 22 de julio 2022, de Pontificia Universidad Javeriana, Bogotá Sitio web: https://rstudio-pubs-static.s3.amazonaws.com/302601_c611260b6f2f4754982ea2b3b495f9ce.html_
+
+
+
+
+

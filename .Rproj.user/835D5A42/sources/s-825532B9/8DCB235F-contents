@@ -1,0 +1,786 @@
+#-------------------------------------------#
+#     CLUSTER JERÁRQUICO Y DE PARTICIÓN     #
+#     Estudiante: Camilo Mendez Hilario     # 
+#     20191412@lamolina.edu.pe              #
+#-------------------------------------------#
+
+# Para limpiar el workspace, por si hubiera algún dataset 
+# o información cargada
+rm(list = ls())
+graphics.off()
+
+# Cambiar el directorio de trabajo
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+getwd()
+
+# Otras opciones
+options(scipen=999)      # Eliminar la notación científica
+options(digits = 3)      # Número de decimales
+
+
+#----------------------#
+# Descripción del caso #
+#----------------------#
+
+# Los bancos suelen tener campañas de marketing para sus
+# productos individuales. Therabank es un banco establecido que
+# ofrece préstamos personales como producto. La mayoría de los
+# clientes de Therabank tienen depósitos, lo que constituye un
+# pasivo para el banco y no es rentable. Los préstamos son
+# rentables para el banco. Por tanto, conseguir que más clientes
+# opten por un préstamo personal hace que el negocio sea más
+# rentable. La tarea en cuestión es crear segmentos de clientes
+# para maximizar la efectividad de su campaña de préstamos
+# personales.
+# El banco tiene datos de los clientes que incluyen datos
+# demográficos, cierta información financiera y cómo 
+# respondieron estos clientes a una campaña anterior. 
+# Las columnas más importantes son:
+# • Age: edad del cliente en años
+# • Experience: La experiencia laboral del cliente en años.
+# • Income: los ingresos anuales estimados del cliente
+#   (miles de dólares estadounidenses)
+# • CCAvg: el gasto promedio en tarjetas de crédito por mes
+#   (miles de dólares estadounidenses)
+# • Mortgage: el valor de la hipoteca de la casa del cliente
+#   (si corresponde)
+# • Family: número de miembros de su hogar
+
+# El objetivo es crear segmentos de clientes para la campaña 
+# de marketing. También identificará cuáles de estos segmentos
+# tienen la mayor propensión a responder a la campaña, 
+# información que ayudará en gran medida a optimizar campañas
+# futuras.
+# Se trabajará únicamente con las columnas más importantes mencionadas
+# anteriormente
+
+# Paquetes
+library(pacman)
+p_load(cluster, aplpack, fpc, foreign, TeachingDemos,
+       factoextra, NbClust, ape, corrplot, DataExplorer,
+       funModeling, compareGroups, tidyverse, dendextend,
+       igraph, FeatureImpCluster, flexclust, LICORS, h2o,
+       gghighlight,readr)
+
+data <- read.csv("Bank_Personal_Loan_Modelling-2.csv",
+                    sep = ";", stringsAsFactors = T)
+data <- data %>% select(Age, Experience, Income, CCAvg, Mortgage, Family)
+View(data); # visualización de la data
+
+# Análisis de la data 
+df_status(data)
+
+# Descripción de las variables numéricas
+profiling_num(data)
+summary(data)
+
+# Interpretación:
+# La presenta data no presenta datos perdidos (NA), por lo que es un buen indicador
+# ya que esta técnica de interdependencia tiene como objetivo análizar a las obseraciones
+# y a travez de técnicas poder agruparlas. 
+# Se pudo observar que las medidas de variabilidad de cada variable presenta variaciones 
+# entre ellas, el rango de las variables difieren significativamente. Por lo tanto, se
+# procederá a estandarizar las variables para que presenten un valor similar
+# al calcular las medidas de variabilidad. Esto con la finalidad de que al momento de aplicar 
+# medidas  de distancia para hallar la matriz de distancia, los valores obtenidos sean los 
+# correctos y así poder agrupar bien, ya que estos valores calculados se ven afectados cuando
+# las variables no se encuentran medidas en la misma escala.
+
+# Estandarización de los datos
+datos.e <- as.data.frame(scale(data))
+
+# Descripción de las variables numéricas estandarizadas
+profiling_num(datos.e)
+summary(datos.e)
+# Interpretación
+# Se observa  que todas las variables presentan desviación estandar igual a 1.
+# Las variables presentan un rango que es muy similar y su variacion significativa
+# es mínima.
+
+# Para este caso aplicaremos cluster de método Jerárquico y método de partición.
+
+# Método Jerárquico
+# Este método es el menos usado, a comparación del método de partición en este 
+# no se conoce el número de cluster ni como estará caracterizado cada grupo o cluster.
+# El presente método presenta dos tipos de agrupamiento:
+# 1. Aglomerativo: Este método aglomerativo parte que cada observación es un grupo o
+#                  cluster, es decir se tendra tantos grupos o cluster como observaciones
+#                  se tenga. A travez de los métodos de enlace se iran agrupando hasta
+#                  el punto de que todo se forme u solo grupo o cluster
+# 2. Divisivo: Este método divisivo es lo contrario al método aglomerativo, es decir, todo
+#              partira de un solo grupo o cluster y estos se iran subdiviendo hasta el punto
+#              de que se obtenga tantos grupos o clusters como observaciones se tenga.
+# Cabe mencionar que en este método jerarquico el número de cluster lo determinará el investigador
+# es decir será a propio juicio de valor, obviamente teniendo en cuenta los intereses y 
+# restricciones de la empresa. 
+
+# Para este caso solo aplicaremos el método jerarquico aglomerativo, ya que a comparación del 
+# divisivo presenta menor costo computacional.
+
+#-------------------------------------------------------------------------------#
+#                                                                               #
+#         CLUSTER JERARQUICO AGLOMERATIVO UTILIZANDO EL PAQUETE AGNES           #
+#                                                                               #
+#-------------------------------------------------------------------------------#
+
+# Calculando la matriz distancia con la distancia Euclidiana
+
+dist.eucl <- dist(datos.e, method = "euclidean") # por defecto la matriz no muestra la diagonal de ceros
+
+# Cluster Jerarquico usando los métodos de encale: ward.D, centroid, average, ward.D2, complete
+res.hc1 <- hclust(dist.eucl, method = "ward.D" )
+res.hc2 <- hclust(dist.eucl, method = "centroid" )
+res.hc3 <- hclust(dist.eucl, method = "average" )
+res.hc4 <- hclust(dist.eucl, method = "ward.D2" )
+res.hc5 <- hclust(dist.eucl, method = "complete" )
+res.hc6 <- hclust(dist.eucl, method = "single" )
+
+
+
+# Agrupando las últimas 20 distancias para una posterior visualización en 
+# el gráfico. 
+distancia1<- data.frame(etapa = 4980:4999,distancia = res.hc1$height[4980:4999]); distancia1
+distancia2<- data.frame(etapa = 4980:4999,distancia = res.hc2$height[4980:4999]); distancia2
+distancia3<- data.frame(etapa = 4980:4999,distancia = res.hc3$height[4980:4999]); distancia3
+distancia4<- data.frame(etapa = 4980:4999,distancia = res.hc4$height[4980:4999]); distancia4
+distancia5<- data.frame(etapa = 4980:4999,distancia = res.hc5$height[4980:4999]); distancia5
+distancia6<- data.frame(etapa = 4980:4999,distancia = res.hc6$height[4980:4999]); distancia6
+
+# Graficando las últimas 20 distancias utilizando la distancia euclidean y
+# el método de enlace ward.D
+ggplot(distancia1) + aes(x = etapa, y = distancia)  +
+  geom_point() + geom_line()  + 
+  scale_x_continuous(breaks = seq(49800, 4999)) + 
+  geom_vline(xintercept = 4997, col = "red", lty = 3) + 
+  geom_vline(xintercept = 4999, col = "blue", lty = 3) + 
+  theme_bw()
+# Interpretación
+# Las últimas 3 distancias presentan saltos más significativos, por lo tanto
+# se justifica que se trabjará con 3 clusters.
+
+
+
+# Graficando las últimas 20 distancias utilizando la distancia euclidean y
+# el método de enlace centroid
+ggplot(distancia2) + aes(x = etapa, y = distancia)  +
+  geom_point() + geom_line()  + 
+  scale_x_continuous(breaks = seq(49800, 4999)) + 
+  geom_vline(xintercept = 4995, col = "red", lty = 3) + 
+  geom_vline(xintercept = 4999, col = "blue", lty = 3) + 
+  theme_bw()
+# Interpretación:
+# Las últimas 5 distancias presentan saltos más significativos a comparación
+# de las demas distancias, por lo tanto se justifica que se trabajará con 5 clusters.
+
+
+
+# Graficando las últimas 20 distancias utilizando la distancia euclidean y
+# el método de enlace average
+ggplot(distancia3) + aes(x = etapa, y = distancia)  +
+  geom_point() + geom_line()  + 
+  scale_x_continuous(breaks = seq(49800, 4999)) + 
+  geom_vline(xintercept = 4998, col = "red", lty = 3) + 
+  geom_vline(xintercept = 4999, col = "blue", lty = 3) + 
+  theme_bw()
+# Interpretación:
+# Las últimas 2 distancias presentan saltos más significativos a comparación
+# de las demas distancias, por lo tanto se justifica que se trabajará con 2 clusters.
+
+
+
+# Graficando las últimas 20 distancias utilizando la distancia euclidean y
+# el método de enlace ward.D2
+ggplot(distancia4) + aes(x = etapa, y = distancia)  +
+  geom_point() + geom_line()  + 
+  scale_x_continuous(breaks = seq(49800, 4999)) + 
+  geom_vline(xintercept = 4997, col = "red", lty = 3) + 
+  geom_vline(xintercept = 4999, col = "blue", lty = 3) + 
+  theme_bw()
+# Interpretación
+# Las últimas 3 distancias presentan saltos más significativos, por lo tanto
+# se justifica que se trabjará con 3 clusters.
+
+
+
+# Graficando las últimas 20 distancias utilizando la distancia euclidean y
+# el método de enlace complete
+ggplot(distancia5) + aes(x = etapa, y = distancia)  +
+  geom_point() + geom_line()  + 
+  scale_x_continuous(breaks = seq(49800, 4999)) + 
+  geom_vline(xintercept = 4997, col = "red", lty = 3) + 
+  geom_vline(xintercept = 4999, col = "blue", lty = 3) + 
+  theme_bw()
+# Interpretación
+# Las últimas 3 distancias presentan saltos más significativos, por lo tanto
+# se justifica que se trabjará con 3 clusters.
+
+# Graficando las últimas 20 distancias utilizando la distancia euclidean y
+# el método de enlace single
+ggplot(distancia6) + aes(x = etapa, y = distancia)  +
+  geom_point() + geom_line()  + 
+  scale_x_continuous(breaks = seq(49800, 4999)) + 
+  geom_vline(xintercept = 4998, col = "red", lty = 3) + 
+  geom_vline(xintercept = 4999, col = "blue", lty = 3) + 
+  theme_bw()
+
+# Conclusión final de clusters:
+# Para este estudio se utilizo 6 métodos de enlace, de los cuales con 3 de ellos
+# (ward.D, ward.D2 y complete) se concluyo trabajar con 3 clusters y con los 
+# 3 restantes (average, centroid, single) indicaron trabajar con 2 clusters, 5 clusters
+# y con 2 clusters, pero por una mayoría se decidió trabajar con 3 clusters.
+
+
+# Se almacenará el número de clusters que pertenece a cada observacón
+grupo1 <- cutree(res.hc1, k = 3)  # enlace ward
+grupo2 <- cutree(res.hc4, k = 3)  # enlace ward.D2
+grupo3 <- cutree(res.hc5, k = 3)  # enlace complete
+
+
+# Graficando los cluster (enlace ward)
+fviz_cluster(list(data = datos.e, cluster = grupo3),
+             palette = c("#2E9FDF",  "#E7B800", "#FC4E07"),
+             ellipse.type = "convex", #Concentration ellipse
+             repel = F, # Avoid label overplotting (slow)
+             show.clust.cent = FALSE, ggtheme = theme_minimal())
+
+# Graficando los cluster (enlace ward.D2)
+fviz_cluster(list(data = datos.e, cluster = grupo3),
+             palette = c("#2E9FDF",  "#E7B800", "#FC4E07"),
+             ellipse.type = "convex", #Concentration ellipse
+             repel = F, # Avoid label overplotting (slow)
+             show.clust.cent = FALSE, ggtheme = theme_minimal())
+
+# Graficando los cluster (enlace complete)
+fviz_cluster(list(data = datos.e, cluster = grupo3),
+             palette = c("#2E9FDF",  "#E7B800", "#FC4E07"),
+             ellipse.type = "convex", #Concentration ellipse
+             repel = F, # Avoid label overplotting (slow)
+             show.clust.cent = FALSE, ggtheme = theme_minimal())
+
+#------------------------------------DENDOGRAMAS---------------------------------------#
+
+# Dendograma (método ward.D)
+hcd1 <- as.dendrogram(res.hc1)
+nodePar1 <- list(lab.cex = 0.2, pch = c(NA, 19), 
+                cex = 0.0, col = "blue")
+plot(hcd1, ylab = "Height", 
+     nodePar = nodePar1, 
+     leaflab = "none")
+
+# Dendograma (método ward.D2)
+
+hcd2 <- as.dendrogram(res.hc4)
+nodePar2 <- list(lab.cex = 0.2, pch = c(NA, 19), 
+                cex = 0.0, col = "blue")
+plot(hcd2, ylab = "Height", 
+     nodePar = nodePar2, 
+     leaflab = "none")
+
+# Dendograma (método complete)
+
+hcd3 <- as.dendrogram(res.hc5)
+nodePar3 <- list(lab.cex = 0.2, pch = c(NA, 19), 
+                cex = 0.01, col = "blue")
+plot(hcd3, ylab = "Height", 
+     nodePar = nodePar3, 
+     leaflab = "none")
+
+
+# Conclusión gráfica:
+# En primera instancia se logra ver una notoria diferencia entre los gráficos 
+# utilizando enlaces  ward, ward.D2 con complete. 
+# Comparando visualmente los graficos utilizando enlaces ward y ward.D2 se puede
+# notar un ligera diferencia, teniendo en cuenta que no es una desición estadística,
+# esto va más a criterio del investigador. Por lo que a rasgos mínimos el gráfico 
+# que utiliza el enlace ward hace que mejor se cumpla los principios de cohesión y
+# separación.
+
+#---------------------------------------------------------------------------------------------#
+#                                  COMPARACIÓN DE DENDOGRAMAS                                 #
+#                                                                                             #
+# Para hallar la similitud entre dendogramas de los diferentes métodos se utiliza el críterio #
+# entanglement (enredo) el rango del entanglemet oscila de 0-1, indicando que si este es      #
+# cercano a cero presenta un enredo mínimo, es decir son parecidos pero si, si el enredo      # 
+# es cercano a 1 presenta un enredo máximo, es decir que son diferentes. Para este estudio    #
+# no se se utilizo esta comparación debido a que el costo algoritmico es elevado (el tiempo   #
+# de ejecución es elevado, debido a la gran cantidad de observaciones).                       #
+#                                                                                             #
+#---------------------------------------------------------------------------------------------#
+
+
+
+
+
+
+
+#------------------------------------------------------------------------------#
+#                                                                              #
+#                               MÉTODO DE PARTICIÓN                            #
+#                                                                              #
+# Este método a diferencia del método jerarquico se sabe con cuantos clusters  # 
+# se trabajará.                                                                #
+# Para el presente estudio se cuenta con diferentes medidas de distancia:      #
+# Euclidiana, Mahalanobis, Manhattan, Euclidiana al cuadrado, Minkowski,       #
+# Grover entre otras.                                                          #
+# Los métodos de agrupamiento o enlace que se cuenta para el agrupamiento      #
+# de las observaciones son: Lloyod, MacQueen y Hartigan - Wong.                #
+# Los algoritmos de partición que se aplicarán son: K-means, K-meas++  y       #
+# K-meas jerarquico                                                            #
+# Para la elección del número de cluster se trabajaran con los metodos: Elbow, #
+# Metodo Silueta.                                                              #
+#------------------------------------------------------------------------------#
+
+# Metodos para elegir el número de cluster: 
+
+# 1. Metodo Silueta
+
+set.seed(2022)  # La semilla lo establece el investigador
+fviz_nbclust(datos.e, kmeans, method = "silhouette") +
+  labs(subtitle = "Silhouette method")
+# El metodo silueta indica trabajarcon 3 cluster.
+
+# 2. Metodo Elbow
+
+set.seed(2022)
+wss <- numeric()
+for(h in 1:10){
+  b<-kmeans(datos.e,h)
+  wss[h]<-b$tot.withinss #scintra
+}
+wss1 <- data.frame(cluster=c(1:10),wss)
+
+# Gráficamos el cluster con la S.C.
+
+ggplot(wss1) + aes(cluster,wss) + geom_line(color="light blue") + 
+  geom_point(color="blue") +
+  geom_vline(xintercept = 3, linetype = 2, col="red") +
+  labs(title = "Método Elbow") + 
+  scale_x_continuous(breaks=1:10) +
+  theme_dark()
+# Según el método de Elbow nos quedamos con 3 clusters, ya que en la gráfica el punto de
+# de inflexión se encuentra en el tercer punto. 
+
+
+#------------------------------------------------------------------------------# 
+#                                  MÉTODO K-MEANS                              #
+#                                                                              #
+# Se toma como punto de partida el número de clusters ya seleccionados en base #
+# a los métodos (Elbow - Silueta), estos puntos son elegido de forma aleatoria #
+# y se calculara las distancias a las demas observaciones, las observaciones   #
+# mas cercanas a cada punto se asociarán y formarán clusters, luego una vez    #
+# formado el grupo, se calcula el centroide y se vuelve a recalcular las       #
+# las distancias del centroide  a las observaciones, estas empezarán a variar  #
+# de cluster, estas interacciones terminarán cuando toda observación este      #
+#  estable en su cluster correspondiente.                                      #
+#------------------------------------------------------------------------------#
+
+# Algoritmo Lloyd
+set.seed(2022)
+km1 <- kmeans(datos.e, 
+             centers=3,                     # Número de Cluster
+             iter.max = 100,                # Número de iteraciones máxima
+             nstart = 25,                   # Número de puntos iniciales
+             algorithm = "Lloyd")      
+
+km1$withinss     # Suma de cuadrados total de cada cluster
+km1$tot.withinss # Suma de cuadrados Total  (SCTotal)
+km1$totss        # Suma de cuadrados total intra cluster (SCIntra)
+km1$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+km1$iter         # Número de interacciones
+
+# Visualización de las soluciones usando ACP
+library(factoextra)
+fviz_cluster(km1,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+# Algoritmo MacQueen
+set.seed(2022)
+km2 <- kmeans(datos.e, 
+             centers=3,                     # Número de Cluster
+             iter.max = 100,                # Número de iteraciones máxima
+             nstart = 25,                   # Número de puntos iniciales
+             algorithm = "MacQueen")      
+
+km2$withinss     # Suma de cuadrados total de cada cluster
+km2$tot.withinss # Suma de cuadrados Total  (SCTotal)
+km2$totss        # Suma de cuadrados total intra cluster (SCIntra)
+km2$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+km2$iter         # Número de interacciones
+
+# Visualización de las soluciones usando ACP
+fviz_cluster(km2,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+# Algoritmo Hartigan-Wong
+set.seed(2022)
+km3 <- kmeans(datos.e, 
+             centers=3,                     # Número de Cluster
+             iter.max = 100,                # Número de iteraciones máxima
+             nstart = 25,                   # Número de puntos iniciales
+             algorithm = "Hartigan-Wong")      
+
+km3$withinss     # Suma de cuadrados total de cada cluster
+km3$tot.withinss # Suma de cuadrados Total  (SCTotal)
+km3$totss        # Suma de cuadrados total intra cluster(SCIntra)
+km3$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+km3$iter         # Número de interacciones
+
+# Visualización de las soluciones usando ACP
+library(factoextra)
+fviz_cluster(km3,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+#------------------------------------------------------------------------------#
+#                            Conclusiones  K-meas                              #
+# Se emplearon 3 algoritmos para el agrupamiento de observaciones, con los 3   #
+# algoritmos(Lloyod, MacQueen y Hartigan-Wong) se obtuvo el mismo valor en la  #
+# Suma de cuadrados total intra cluster, por lo que en primera instancia se    #
+# hubiece elegido este criterio como discriminador ya que en K-means se busca  #
+# obtener el menor número de cluster y asu vez obtener el menor valor en Suma  #
+# de cuadrados total intra cluster. Al notar que presentan el mismo valor, se  #
+# tomara como discrimiador al número de interacciones.                         #
+# Con el algoritmo Lloyod agrupó las observaciones con 12 interacciones,       #
+# MacQueen con 7 interacciones y Hartigan-Wong con 4 interacciones por lo que  # 
+# nos quedaremos con el algoritmo Hartigan-Wong.                               #
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------# 
+#                               MÉTODO K-MEANS++                               #
+#                                                                              #
+# El metodo K-meas++ toma como punto de partida cualquier punto, este elegido  #
+# de forma al azar, luego se calcula las distancia de ese punto a las demás    #
+# observaciones, la observación mas alejada al punto inicial será considerado  #
+# como segundo punto cluster, para escoger un tercer punto cluster se tendrá   #
+# que calcular que observación esta más alejada a los dos puntos clusters      #
+# Una vez obtenidos los puntos cluster que necesitamos, inicia el cálculo de   #
+# el centroide de cada cluster y con ello calcular las observaciones más       #
+# cercanas a cada centroide y reubicarlas, hasta llegar a la interacción que   #
+# no varie ninguna observación de su cluster respectivo.                       #
+#------------------------------------------------------------------------------#
+
+
+
+#------------------------------------------------------------------------------#
+#                                 funcion Kmansapp()                           #
+kmeanspp <- function(data, k = 3, 
+                     start = "random", 
+                     iter.max = 100, 
+                     nstart = 10, ...) {
+  
+  kk <- k
+  
+  if (length(dim(data)) == 0) {
+    data <- matrix(data, ncol = 1)
+  } else {
+    data <- cbind(data)
+  }
+  
+  num.samples <- nrow(data)
+  ndim <- ncol(data)
+  
+  data.avg <- colMeans(data)
+  data.cov <- cov(data)
+  
+  out <- list()
+  out$tot.withinss <- Inf
+  for (restart in seq_len(nstart)) {  
+    center_ids <- rep(0, length = kk)
+    if (start == "random"){
+      center_ids[1:2] = sample.int(num.samples, 1)
+    } else if (start == "normal") { 
+      center_ids[1:2] = which.min(dmvnorm(data, mean = data.avg, 
+                                          sigma = data.cov))
+    } else {
+      center_ids[1:2] = start
+    }
+    for (ii in 2:kk) { # the plus-plus step in kmeans
+      if (ndim == 1){
+        dists <- apply(cbind(data[center_ids, ]), 1, 
+                       function(center) {rowSums((data - center)^2)})
+      } else {
+        dists <- apply(data[center_ids, ], 1, 
+                       function(center) {rowSums((data - center)^2)})
+      }
+      probs <- apply(dists, 1, min)
+      probs[center_ids] <- 0
+      center_ids[ii] <- sample.int(num.samples, 1, prob = probs)
+    }
+    
+    tmp.out <- kmeans(data, centers = data[center_ids, ], iter.max = iter.max, ...)
+    tmp.out$inicial.centers <- data[center_ids, ]
+    if (tmp.out$tot.withinss < out$tot.withinss){
+      out <- tmp.out
+    }
+  } 
+  invisible(out)
+}
+#------------------------------------------------------------------------------#
+
+# Algoritmo Lloyd
+set.seed(2022)   # La semilla es a criterio del investigador
+kmpp1 <- kmeanspp(datos.e, 
+                 k=3, 
+                 start="random",
+                 nstart = 25,
+                 iter.max=100,
+                 algorithm = "Lloyd")
+kmpp1$withinss     # Suma de cuadrados total de cada cluster
+kmpp1$tot.withinss # Suma de cuadrados Total  (SCTotal)
+kmpp1$totss        # Suma de cuadrados total intra cluster(SCIntra)
+kmpp1$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+kmpp1$iter         # Número de interacciones
+
+# Visualización de las soluciones usando ACP
+fviz_cluster(kmpp1,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+
+# Algoritmo MacQueen
+set.seed(2022)
+kmpp2 <- kmeanspp(datos.e, 
+                 k=3, 
+                 start="random",
+                 nstart = 25,
+                 iter.max=100,
+                 algorithm = "MacQueen")
+kmpp2$withinss     # Suma de cuadrados total de cada cluster
+kmpp2$tot.withinss # Suma de cuadrados Total  (SCTotal)
+kmpp2$totss        # Suma de cuadrados total intra cluster(SCIntra)
+kmpp2$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+kmpp2$iter         # Número de interacciones
+
+# Visualización de las soluciones usando ACP
+fviz_cluster(kmpp2,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+
+# Algoritmo Hartigan-Wong
+set.seed(2022)
+kmpp3 <- kmeanspp(datos.e, 
+                 k=3, 
+                 start="random",
+                 nstart = 25,
+                 iter.max=100,
+                 algorithm = "Hartigan-Wong")
+kmpp3$withinss     # Suma de cuadrados total de cada cluster
+kmpp3$tot.withinss # Suma de cuadrados Total  (SCTotal)
+kmpp3$totss        # Suma de cuadrados total intra cluster(SCIntra)
+kmpp3$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+kmpp3$iter         # Número de interacciones 
+
+# Visualización de las soluciones usando ACP
+fviz_cluster(kmpp3,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+#------------------------------------------------------------------------------#
+#                          Conclusiones   K-meas++                             #
+# Se emplearon 3 algoritmos para el agrupamiento de observaciones, con los 3   #
+# algoritmos(Lloyod, MacQueen y Hartigan-Wong) se obtuvo el mismo valor en la  #
+# Suma de cuadrados total intra cluster, por lo que en primera instancia se    #
+# hubiece elegido este criterio como discriminador ya que en K-means se busca  #
+# obtener el menor número de cluster y asu vez obtener el menor valor en Suma  #
+# de cuadrados total intra cluster. Al notar que presentan el mismo valor, se  #
+# tomara como discrimiador al número de interacciones.                         #
+# Con el algoritmo Lloyod agrupó las observaciones con 12 interacciones,       #
+# MacQueen con 6 interacciones y Hartigan-Wong con 3 interacciones por lo que  # 
+# nos quedaremos con el algoritmo Hartigan-Wong.                               #
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------# 
+#                         MÉTODO K-MEANS JERARQUICO                            #
+#                                                                              #
+# Este método consiste en tomar como punto de partida al valor obtenido del    #
+# promedio de observaciones de cada cluster que se obtuvo al realizar el       #
+# cluster jerarquico. Se toma como referencia ese valor, ya que con este se    #
+# espera el menor número de interacciones.                                     #
+#------------------------------------------------------------------------------#
+
+# Algoritmo Lloyd
+res.hk1<- hkmeans(datos.e,
+                 k=3,
+                 hc.metric="euclidean",
+                 hc.method="ward.D",
+                 iter.max=10,
+                 km.algorithm = "Lloyd")
+res.hk1$withinss     # Suma de cuadrados total de cada cluster
+res.hk1$tot.withinss # Suma de cuadrados Total  (SCTotal)
+res.hk1$totss        # Suma de cuadrados total intra cluster(SCIntra)
+res.hk1$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+res.hk1$iter         # Número de interacciones 
+
+# Visualización de las soluciones usando ACP
+fviz_cluster(res.hk1,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+
+# Algoritmo MacQueen
+res.hk2<- hkmeans(datos.e,
+                 k=3,
+                 hc.metric="euclidean",
+                 hc.method="ward.D",
+                 iter.max=10,
+                 km.algorithm = "MacQueen")
+res.hk2$withinss     # Suma de cuadrados total de cada cluster
+res.hk2$tot.withinss # Suma de cuadrados Total  (SCTotal)
+res.hk2$totss        # Suma de cuadrados total intra cluster(SCIntra)
+res.hk2$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+res.hk2$iter         # Número de interacciones 
+
+# Visualización de las soluciones usando ACP
+fviz_cluster(res.hk2,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+# Algoritmo Hartigan-Wong
+res.hk3<- hkmeans (datos.e,
+                 k=3,
+                 hc.metric="euclidean",
+                 hc.method="ward.D",
+                 iter.max=10,
+                 km.algorithm = "Hartigan-Wong")
+res.hk3$withinss     # Suma de cuadrados total de cada cluster
+res.hk3$tot.withinss # Suma de cuadrados Total  (SCTotal)
+res.hk3$totss        # Suma de cuadrados total intra cluster(SCIntra)
+res.hk3$betweenss    # Suma de cuadrados total inter cluster (SCInter)
+res.hk3$iter         # Número de interacciones 
+
+# Visualización de las soluciones usando ACP
+fviz_cluster(res.hk3,data=datos.e,ellipse.type = "convex") + 
+  theme_classic()
+
+#------------------------------------------------------------------------------#
+#                        Conclusiones  K-meas Jerarquico                       #
+# Se emplearon 3 algoritmos para el agrupamiento de observaciones, con los 3   #
+# algoritmos(Lloyod, MacQueen y Hartigan-Wong) se obtuvo el mismo valor en la  #
+# Suma de cuadrados total intra cluster, por lo que en primera instancia se    #
+# hubiece elegido este criterio como discriminador ya que en K-means se busca  #
+# obtener el menor número de cluster y asu vez obtener el menor valor en Suma  #
+# de cuadrados total intra cluster. Al notar que presentan el mismo valor, se  #
+# tomara como discrimiador al número de interacciones.                         #
+# Con el algoritmo Lloyod agrupó las observaciones con 7 interacciones,        #
+# MacQueen con 5 interacciones y Hartigan-Wong con 2 interacciones por lo que  # 
+# nos quedaremos con el algoritmo Hartigan-Wong.                               #
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+#           Conclusiones finales para el Método de Partición                   #
+# Se empleo 3 algortimos k-means, k-means++ y k-means Jerarquico en cada uno   #
+# de ellos se opto por el algoritmo de agrupamiento Hartigan-Wong.             #
+# De los 3 algortimos se opta por K-means++ esto debido a que a diferencia del #
+# k-means este presenta menor de interacciones, sus puntos de partida son      #
+# eligidos de forma progresiva (solo el primer punto es aleatorio), k-means    #
+# elige todos sus puntos de cluster de forma aleatoria, lo que no es lo mas    #
+# adecauado ya que, al ser aleatorio tiene probabilidad de que tengas más      #
+# interacciones. No se opto por K-means Jerarquico a pesar de que presenta un  #
+# menor número de interraciones porque su costo algoritmico es mucho mayor     # 
+# sobre k-means y k-means++ porque para elegir sus puntos de partida tiene que #
+# realizar un cluster jerarquico y calcular el centroide de cada cluster.      #
+#------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------#
+#                Conclusión Final de la Técnica a utilizar                     #
+# Para el metodo jerarquico y de partición se calculó y se obtuvo la mejor     # 
+# opción, pero ¿Que técnica es la más adecuada para nuestro estudio?           #
+# Conclusión: De forma visual se puede corrobar la técnica menos apropiada     # 
+#             es cluster jerárquico aglomerativo.                              #
+#             Quedandonos con la técnica k-meas++ de distancia euclidiana y de #
+#             método de enlace Hartigan-Wong.                                  #
+#------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------#
+#                           CARACTERIZANDO CLUSTER                             #
+# Consiste en analizar los centros de gravedad de cada grupo (promedios)       #
+#------------------------------------------------------------------------------#
+
+datos.e %>%
+  mutate(grupo=res.hk3$cluster) -> datos.kmas
+# Pasando datos.kmas a factor
+datos.kmas$grupo <- factor(datos.kmas$grupo); datos.kmas$grupo
+
+# Agrupamos los datos estandarizados con su respectivo cluster
+datos.kmeas.mas <- cbind(datos.e, cluster = datos.kmas$grupo)
+head(datos.kmeas.mas)
+
+# Número de individuos por cluster
+
+datos.kmeas.mas %>% group_by(cluster) %>% count()->n.clusters 
+n.clusters
+
+
+# promedio por cluster
+datos.kmeas.mas %>%   
+  group_by(cluster) %>%
+  summarise_all(list(mean)) -> medias  ;medias
+
+# promedio general por cada cluster
+datos.kmeas.mas %>% summarise_if(is.numeric,mean) -> general; general
+general <- cbind(cluster="general",general); general
+
+# Unimos las medias individuales y las generales de cada variable con respecto a cada cluster
+medias  <- as.data.frame(rbind(medias,general)); medias
+
+# Convirtiendo la data a formato tidy
+datos_totales<- pivot_longer(data=medias,
+                             -cluster,
+                             names_to="variable",
+                             values_to = "valor")
+head(datos_totales)
+
+
+
+# Gráfico de lineas 
+
+matplot(t(medias[,-1]),
+        main = "Gráfico de promedios de variables por cluster",
+        xlab = "Variables",
+        ylab = "Promedios",
+        type="l",
+        col=c("blue","red","green4", "black"),
+        xaxt="n")   # Permite eliminar los nombres del eje X
+axis(1,at=1:6,
+     labels=c("AGE","Experience","Income","CCAvg","Mortgage","Family"))
+legend("bottom", c("Cluster 1", "Cluster 2", "Cluster 3","General"), 
+       pch=c(19,19,19,19), ncol=4, cex=0.6, 
+       col=c("blue","red","green4","black"), bty="n")
+
+#-------------------------------------------------------------------------------------#
+#                               Conclusiones génerales                                #
+#                                                                                     #
+# Luego de una serie de comparaciones con diferentes métodos de enlace se determino   #
+# por optar por el método de distancia euclidiana y de enlace war.D                   #
+# Las conclusiones finales se basan en los métodos ya mencionados.                    #
+#                                                                                     #
+# Cluster1: Engloba a aquellos personas que presentan menor edad, a la vez tienen     #
+#           menor experiencia laboral como clientes, sus ingresos son por debajo      #
+#           del promedio,sus gatos de tarjetas un poco menor al promedio, tienen un   #
+#           valor de hipoteca de su hogar (Mortgage) por debajo del promedio y el     #
+#           número de personas de su familia son los mas alevados.                    #
+#                                                                                     #
+# Cluster2: Engloba a aquellas personas que presentan mayor edad al igual que su      #
+#           experiencia laboral, mientras que sus ingresos anuales estan por debajo   #
+#           del promedio al igual que el gasto promedio de sus tarjetas, el valor de  #
+#           su hipoteca y el número de miembros de su hogar.                          #
+#                                                                                     #
+# Cluster3: Engloba a aquellas personas que están casi por debajo del promedio al     #
+#           igual que los años de experiencia laboral, sin embargo estos presentan    #
+#           los mayores ingresos anuales al igual que el valor de su hipoteca, pero   #
+#           el gasto promedio en tarjetas es menor al promedio y por último, el       #
+#           número de miembros de su hogar son relativamente mayores al promedio.     #  
+#-------------------------------------------------------------------------------------#
+
+#-------------------------------------------------------------------------------------#
+#                             Conclusiones específicas                                #
+#                                                                                     #
+# Cluster 1: representa a las personas que tienen el mayor número de integrantes      #
+#            en su familia y el mayor valor de la hipoteca de su predio.              #                    
+#                                                                                     #
+# Cluster 2: representa a las personas que tienen mayor edad y los que tienen         #
+#            mayor experiencia laboral.                                               #
+#                                                                                     #
+# Cluster 3: representa a las personas que tienen mayor ingreso anual y mayor         #
+#            gasto promedio alto en tarjetas de crédito por mes.                      #
+#-------------------------------------------------------------------------------------#
+
+
